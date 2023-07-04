@@ -1,0 +1,24 @@
+{
+    "current_set": "main",
+    "settings": {},
+    "sets": [
+        {
+            "name": "games",
+            "tar_file": "/home/jakers/desktop/games.tar.gz",
+            "paths": [
+                "/home/jakers/desktop"
+            ]
+        },
+        {
+            "name": "pictures",
+            "tar_file": "/home/jakers/pictures.tar.gz",
+            "paths": []
+        },
+        {
+            "name": "music",
+            "tar_file": null,
+            "paths": []
+        }
+    ],
+    "exclude": []
+}
