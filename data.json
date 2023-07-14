@@ -1,24 +1,69 @@
 {
-    "current_set": "main",
-    "settings": {},
+    "settings": {
+        "drop_dir":null
+    },
     "sets": [
         {
-            "name": "games",
-            "tar_file": "/home/jakers/desktop/games.tar.gz",
-            "paths": [
-                "/home/jakers/desktop"
+            "name": "audio",
+            "tar_file": null,
+            "last_ran": null,
+            "paths": [],
+            "records": [
+                "[07-06-23 | 20:03] set created"
             ]
         },
         {
-            "name": "pictures",
-            "tar_file": "/home/jakers/pictures.tar.gz",
-            "paths": []
+            "name": "data",
+            "tar_file": null,
+            "last_ran": null,
+            "paths": [],
+            "records": [
+                "[07-06-23 | 20:03] set created"
+            ]
         },
         {
-            "name": "music",
+            "name": "programming",
+            "tar_file": "/mnt/drive/Backups/packrat/docs_%.tar.gz",
+            "last_ran": "07-13-23",
+            "paths": [
+                "/mnt/drive/programming"
+            ],
+            "records": [
+                "[07-06-23 | 20:04] set created",
+                "[07-13-23 | 23:42] changed tarfile: None -> /mnt/drive/Backups/packrat/docs_%.tar.gz",
+                "[07-13-23 | 23:43] performed archive -> /mnt/drive/Backups/packrat/docs_07-13-23.tar.gz"
+            ]
+        },
+        {
+            "name": "school",
             "tar_file": null,
-            "paths": []
+            "last_ran": null,
+            "paths": [],
+            "records": [
+                "[07-06-23 | 20:04] set created"
+            ]
+        },
+        {
+            "name": "software",
+            "tar_file": null,
+            "last_ran": null,
+            "paths": [],
+            "records": [
+                "[07-06-23 | 20:04] set created"
+            ]
+        },
+        {
+            "name": "docs",
+            "tar_file": "/mnt/drive/Backups/packrat/docs_%.tar.gz",
+            "last_ran": "07-07-23",
+            "paths": [
+                "/mnt/drive/Documents"
+            ],
+            "records": [
+                "[07-07-23 | 13:31] set created",
+                "[07-07-23 | 13:32] changed tarfile: None -> /mnt/drive/Backups/packrat/docs_%.tar.gz",
+                "[07-07-23 | 13:35] performed archive -> /mnt/drive/Backups/packrat/docs_07-07-23.tar.gz"
+            ]
         }
-    ],
-    "exclude": []
+    ]
 }
