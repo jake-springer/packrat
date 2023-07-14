@@ -10,8 +10,8 @@ from subprocess import call
 #----------------------------------------------------------
 
 app_title = "Pack Rat"
-app_version = "0.3"
-data_file = "/home/banta/packrat_0.3/data.json"
+app_version = "0.2.1"
+data_file = ""
 cli_args = sys.argv[1:]
 line_length = 50
 options = {

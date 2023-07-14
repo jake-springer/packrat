@@ -18,14 +18,10 @@ their own individual settings and statistics.
 1. Run the tar command.
 `set run music`
 
-# To Do
+# To-Do
 
-- [ ] run > check that there's a tarpath, and other paths saved
 - [ ] check if a path is included in multiple sets
-- [ ] ascii header pls
 - [ ] cool visual stuff like changing the font color
-- [ ] Functionality for the ~/ path
-- [ ] add records functionality 
 - [ ] "not enough options for "random command that doesn't exists""
 - [ ] default directory for tar.gz files
 - [ ] check for write perms in directories
@@ -40,12 +36,17 @@ their own individual settings and statistics.
 - [X] Actual help manager
 - [X] set marker in tarfile to add date in file name
 - [X] Archive records, last time set was archived. 
+- [X] run() -> check that there's a tarpath, and other paths saved
+- [X] ascii header pls
+- [X] Functionality for the ~/ path
+- [X] add records functionality 
+
  
 ### 0.2
 - [X] display version id
  
 
-## Errors
+# Errors
 
 101 -> 	add_directory() 	->	failed to add path to the json file failed os.path.exists()
 
@@ -63,4 +64,9 @@ their own individual settings and statistics.
 
 108 ->  set_drop_dir()		->  tried to set a path that doesn't exist, failed os.path.exists()
 
+# Change Log
 
+## 0.2.1
+- create_set() 		-> checks if set with matching name exists, cancels saving if true.
+- set_info()   		-> displays a value based on the sets last_ran attribute
+- set_drop_dir() 	-> changes the drop_dir value in the settings 
