@@ -10,12 +10,16 @@ their own individual settings and statistics.
 
 ### Example
 1. Create the "music" set.
+<br>
 `set create music`
 1. Add the directory to the set.
+<br>
 `set add music ~/Music`
 1. Define the archive file path. The "%" character tells PackRat to add today's date.
-'set target music /mnt/Backups/music_%.tar.gz'
+<br>
+`set target music /mnt/Backups/music_%.tar.gz`
 1. Run the tar command.
+<br>
 `set run music`
 
 
