@@ -20,15 +20,15 @@ their own individual settings and statistics.
 
 # To Do
 
-- [  ] run > check that there's a tarpath, and other paths saved
-- [  ] check if a path is included in multiple sets
-- [  ] ascii header pls
-- [  ] cool visual stuff like changing the font color
-- [  ] Functionality for the ~/ path
-- [  ] add records functionality 
-- [  ] "not enough options for "random command that doesn't exists""
-- [  ] default directory for tar.gz files
-- [  ] check for write perms in directories
+- [ ] run > check that there's a tarpath, and other paths saved
+- [ ] check if a path is included in multiple sets
+- [ ] ascii header pls
+- [ ] cool visual stuff like changing the font color
+- [ ] Functionality for the ~/ path
+- [ ] add records functionality 
+- [ ] "not enough options for "random command that doesn't exists""
+- [ ] default directory for tar.gz files
+- [ ] check for write perms in directories
  
 ### 0.1
 - [X] add directories in cli interface
