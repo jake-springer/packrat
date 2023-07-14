@@ -18,7 +18,34 @@ their own individual settings and statistics.
 1. Run the tar command.
 `set run music`
 
-### Errors
+# To Do
+
+- [  ] run > check that there's a tarpath, and other paths saved
+- [  ] check if a path is included in multiple sets
+- [  ] ascii header pls
+- [  ] cool visual stuff like changing the font color
+- [  ] Functionality for the ~/ path
+- [  ] add records functionality 
+- [  ] "not enough options for "random command that doesn't exists""
+- [  ] default directory for tar.gz files
+- [  ] check for write perms in directories
+ 
+### 0.1
+- [X] add directories in cli interface
+- [X] Do the same five lines of code every time a set is modified. 
+- [X] "list" cli arg
+- [X] create set "main" when init new data.json
+- [X] set info -> show detailed info about a set
+- [X] Need error handling for when not enough options are passed
+- [X] Actual help manager
+- [X] set marker in tarfile to add date in file name
+- [X] Archive records, last time set was archived. 
+ 
+### 0.2
+- [X] display version id
+ 
+
+## Errors
 
 101 -> 	add_directory() 	->	failed to add path to the json file failed os.path.exists()
 
