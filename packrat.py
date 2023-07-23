@@ -1,3 +1,5 @@
+#/usr/bin/python
+
 #----------------------------------------------------------
 
 import json
@@ -10,8 +12,8 @@ from subprocess import call
 #----------------------------------------------------------
 
 app_title = "Pack Rat"
-app_version = "0.2.1"
-data_file = ""
+app_version = "0.2.2"
+data_file = os.path.expanduser("~/.config/packrat.json")
 cli_args = sys.argv[1:]
 line_length = 50
 options = {
@@ -22,7 +24,34 @@ quit_terms = ["exit", "q","quit", "end"]
 
 #----------------------------------------------------------
 
+default_data = {
+        "settings":{
+            "drop_dir":None
+            },
+        "sets":[]
+        }
+
+
+def no_data():
+    '''~/.config/packrat.json not found'''
+    print(f"\n[!] Could not load data file --> {data_file} \n")
+    print("What do you want to do?")
+    print()
+    print("[1]. Create new file")
+    print("[2]. Exit")
+    while True:
+        select = input("\n[?] ")
+        if select == '2':
+            sys.exit()
+        elif select == '1':
+            with open(data_file, 'w') as file:
+                file.write(json.dumps(default_data, indent=4))
+            print("new file created ->", data_file)
+            break
+
+
 def load_data():
+    validate_config()
     with open(data_file, 'r') as file:
         return json.load(file)
 
@@ -37,8 +66,11 @@ def validate_config():
         with open(data_file, 'r') as file:
             pass 
     except FileNotFoundError:
-        print("\n[!] Could not load data file --> {data_file} \n")
-        
+       no_data() 
+
+
+
+
 #---------------------------------------------------------
 
 def get_now(): # returns date,time
@@ -65,7 +97,7 @@ ____            _      ____       _
 |  __/ (_| | (__|   <  |  _ < (_| | |_ 
 |_|   \__,_|\___|_|\_\ |_| \_\__,_|\__|                                        
     ''')
-    print("Version:",app_version)
+    print("Version:", app_version)
     
 
 class Error:
@@ -82,6 +114,18 @@ class Error:
         if verbose:
             # error_string += "\n"
             print(error_string)
+ 
+
+def quick_look():
+    data = load_data()
+    set_list = data["sets"]
+    settings = data["settings"]
+    
+    set_count = str(len(set_list))
+    drop_dir = settings["drop_dir"]
+
+    print("[>] drop directory    ->  ", drop_dir)
+    print("[>] number of sets    ->  ", set_count)
 
 #---------------------------------------------------------
 
@@ -113,6 +157,7 @@ help_info = {
         }
     }
 }
+
 
 def display_help_page(section):
     commands = help_info[section]
@@ -485,23 +530,42 @@ def admin_mode():
             add_data_field()
 
 #--------------------------------------------------------
+# drop dir
 
 def set_drop_dir(drop_dir_path): #! not in use #! wip
+    '''set the settings:{drop_dir:""} value in the json file'''
+    if drop_dir_path[0] == "~": #  expand path if ~/...
+        drop_dir_path = os.path.expanduser(drop_dir_path)
     if not os.path.exists(drop_dir_path):
         Error("Path doesn't exist", 108)
         return
     data = load_data()
     data["settings"]["drop_dir"] = drop_dir_path
     save_data(data)
-    print("[>] Set drop directory:", drop_dir_path)
+    print("[>] Set drop directory:", drop_dir_path, "\n")
 
+
+def config_handler(option_list):
+    '''gateway for config functions'''
+    try:
+        command = option_list[0]
+    except IndexError:
+        print("provide an option to use with 'config'.\n")
+        return
+    if command == 'drop':
+        try:
+            set_drop_dir(option_list[1])
+        except IndexError:
+            print("provide a path to set as the drop directory\n")
+            return
 
 #--------------------------------------------------------
 
 def main():
     data = load_data()
     header(app_title)
-    print("(type \"help\" for more information)")
+    print("(type \"help\" for more information)\n")
+    quick_look()
     print("\n\n")
     while True:
         select = input("[~] ").split()
@@ -513,6 +577,8 @@ def main():
             help_handler()
         elif cursor == "set":
             manage_sets(commands)
+        elif cursor == "config":
+            config_handler(commands)
         elif cursor == "clear":
             clear()
             header(app_title)
