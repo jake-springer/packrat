@@ -558,7 +558,7 @@ def admin_mode():
             add_data_field()
 
 #--------------------------------------------------------
-# drop dir
+# config functions
 
 def set_drop_dir(drop_dir_path):
     '''set the settings:{drop_dir:""} value in the json file'''
@@ -571,6 +571,21 @@ def set_drop_dir(drop_dir_path):
     data["settings"]["drop_dir"] = drop_dir_path
     save_data(data)
     print("[>] Set drop directory:", drop_dir_path, "\n")
+
+
+def toggle_default_target():
+    data = load_data()
+    use_default = data["settings"]["use_default_target"]
+    if use_default:
+        use_default = False 
+        print("-> default_target disabled")
+    else:
+        use_default = True 
+        print("-> default_target enabled")
+    
+    data["settings"]["use_default_target"] = use_default
+    save_data(data)
+    print()
 
 
 def config_handler(option_list):
@@ -586,6 +601,8 @@ def config_handler(option_list):
         except IndexError:
             print("provide a path to set as the drop directory\n")
             return
+    elif command == 'default_target':
+        toggle_default_target()
 
 #--------------------------------------------------------
 
