@@ -153,6 +153,17 @@ help_info = {
             "example":"set new {set name}",
             "desc":"create a new set"
         }
+    },
+    "config":{
+        "drop":{
+            "example":"config drop /mnt/backup_drive/packrat",
+            "desc":"set the default directory for tarfiles to be stored."
+        },
+        "default_target":{
+            "example":"config default_target",
+            "desc":"toggle automatic creation of tar path/file name"
+        }
+
     }
 }
 
@@ -169,13 +180,14 @@ def display_help_page(section):
     print()
     
 
-def help_handler(category=None):
-    print()
-    if category:
+def help_handler(commands):
+    if commands:
+        category = commands[0]
         try:
             section = help_info[category]
         except KeyError:
             Error(f"No help section for {category}", 106)
+            print()
             return 
         display_help_page(category)
     
@@ -248,7 +260,7 @@ def default_target(set_name):
     drop_dir = data["settings"]["drop_dir"]
     # set drop dir to ~/ if not set  
     if not drop_dir:
-        Error("cannot set default target -> no drop directory configured.", 555)
+        Error("cannot set default target -> no drop directory configured.", 109)
         print("defaulting to the home directory")
         drop_dir = os.path.expanduser("~/")
 
@@ -619,7 +631,7 @@ def main():
         if cursor in quit_terms:
             sys.exit()        
         elif cursor == "help":
-            help_handler()
+            help_handler(commands)
         elif cursor == "set":
             manage_sets(commands)
         elif cursor == "config":

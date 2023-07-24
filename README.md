@@ -63,6 +63,8 @@ their own individual settings and statistics.
 107 ->	add_set()			->  tried to create a set with an existing name
 
 108 ->  set_drop_dir()		->  tried to set a path that doesn't exist, failed os.path.exists()
+109 ->  default_target()    ->  tried to create a default tarfile path, but no dropdir configured.
+
 
 # Change Log
 
