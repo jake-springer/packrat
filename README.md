@@ -25,8 +25,9 @@ their own individual settings and statistics.
 - [ ] "not enough options for "random command that doesn't exists""
 - [ ] default directory for tar.gz files
 - [ ] check for write perms in directories
+- [ ] make sure a path isn't being added to the same set more than once
+
  
-### 0.1
 - [X] add directories in cli interface
 - [X] Do the same five lines of code every time a set is modified. 
 - [X] "list" cli arg
@@ -40,9 +41,6 @@ their own individual settings and statistics.
 - [X] ascii header pls
 - [X] Functionality for the ~/ path
 - [X] add records functionality 
-
- 
-### 0.2
 - [X] display version id
  
 

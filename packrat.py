@@ -388,19 +388,6 @@ def set_info(set_name):
 
     print()
 
-#! is different from add_directory() how???
-def set_add_path(set_name, path):
-    target_set = pull_set(set_name)
-    # make sure path exists
-    if not os.path.exists(path):
-        print(f"[!] Path doesn't exist: {path}\n")
-        return
-    # add path to sets path registry
-    target_set["paths"].append(path)
-    target_set = add_record(target_set, f"added path: {path}")
-    save_set(target_set)
-    print(f"[~] Path added to {set_name} -> {path}\n")
-    
 
 def manage_sets(command_list):
     try:
