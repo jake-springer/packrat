@@ -1,4 +1,5 @@
-#/usr/bin/python
+#!/usr/bin/python
+
 #----------------------------------------------------------
 
 import json
@@ -11,7 +12,7 @@ from subprocess import call
 #----------------------------------------------------------
 
 app_title = "Pack Rat"
-app_version = "0.2.2"
+app_version = "0.2.4"
 data_file = os.path.expanduser("~/.config/packrat.json")
 cli_args = sys.argv[1:]
 line_length = 50
@@ -25,8 +26,9 @@ quit_terms = ["exit", "q","quit", "end"]
 
 default_data = {
         "settings":{
-            "drop_dir":None
-            },
+            "drop_dir":None,
+            "use_default_target":True
+            },   
         "sets":[]
         }
 
@@ -66,9 +68,6 @@ def validate_config():
             pass 
     except FileNotFoundError:
        no_data() 
-
-
-
 
 #---------------------------------------------------------
 
@@ -244,6 +243,19 @@ def validate_path(test_path):
     return 1
 
 
+def default_target(set_name):
+    data = load_data()
+    drop_dir = data["settings"]["drop_dir"]
+    # set drop dir to ~/ if not set  
+    if not drop_dir:
+        Error("cannot set default target -> no drop directory configured.", 555)
+        print("defaulting to the home directory")
+        drop_dir = os.path.expanduser("~/")
+
+    tarfile = f"{set_name.lower()}_%.tar.gz"
+    return os.path.join(drop_dir, tarfile)
+
+
 def set_tarfile_path(set_name, new_tar):
     if new_tar[0] == '~':
         new_tar = os.path.expanduser(new_tar)
@@ -262,21 +274,38 @@ def set_tarfile_path(set_name, new_tar):
 def create_set(set_name):
     data = load_data()
     set_list = data["sets"]
+
     # check if set with matching name exists
     for s in set_list:
         if s["name"].lower() == set_name:
             Error(f"Set with name \"{set_name}\" already exists.", 107)
             return
+
+    # pull settings
+    config = data["settings"]
+    use_default_target = config["use_default_target"]
+    if use_default_target:
+        print("> \"use default target\" enabled")
+        target_dir = default_target(set_name)
+        if default_target:
+            print("-> set default target:", target_dir)
+        else:
+            print("[!] no drop directory specified, defaulted to home directory:", target_dir)
+    else:
+        print("> \"use default target\" disabled")
+        target_dir = None
+
+    # create set dictionary
     new_set = {
         "name":set_name,
-        "tar_file":None,
+        "tar_file":target_dir,
         "last_ran":None,
         "paths":[],
         "records":[]
     }
 
+    # save the set to the db
     new_set = add_record(new_set, "set created")
-
     set_list.append(new_set)  
     save_data(data)
     print("[~] Created new set: " + set_name + "\n")
@@ -531,7 +560,7 @@ def admin_mode():
 #--------------------------------------------------------
 # drop dir
 
-def set_drop_dir(drop_dir_path): #! not in use #! wip
+def set_drop_dir(drop_dir_path):
     '''set the settings:{drop_dir:""} value in the json file'''
     if drop_dir_path[0] == "~": #  expand path if ~/...
         drop_dir_path = os.path.expanduser(drop_dir_path)
@@ -615,3 +644,4 @@ if cli_args:
 clear()
 main()
 
+#---------------------------------------------------------
