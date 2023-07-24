@@ -582,7 +582,7 @@ def set_drop_dir(drop_dir_path):
     data = load_data()
     data["settings"]["drop_dir"] = drop_dir_path
     save_data(data)
-    print("[>] Set drop directory:", drop_dir_path, "\n")
+    print("-> set drop directory:", drop_dir_path, "\n")
 
 
 def toggle_default_target():
@@ -651,6 +651,7 @@ def main():
 def cli_handler(options):
     add_ops = ["-a", "--add"] # packrat -a {set} (1 option)
     list_ops = ["-l", "--list", "--sets"] # packrat -l (0 options)
+    drop_ops = ["-d", "--drop", "--dump"]
     command = options[0]
     if command in add_ops:
         try: 
@@ -664,7 +665,10 @@ def cli_handler(options):
         add_directory(set_name, os.getcwd())
     if command in list_ops:
         list_sets()
-    
+    elif command in drop_ops:
+        set_drop_dir(os.getcwd())
+
+
     sys.exit()
 
 if cli_args:
