@@ -111,8 +111,7 @@ class Error:
             sys.exit()    
         if verbose:
             # error_string += "\n"
-            print(error_string)
- 
+            print(error_string) 
 
 def quick_look():
     data = load_data()
@@ -234,18 +233,30 @@ def save_set(set_dict): # NEW
     save_data(data)
     # print(f"[!] Set \"{set_dict['name']}\" was updated\n")
 
+
 # adds path to a sets "path":[] value
 def add_directory(set_name, dir_path):
+    # resolve "~/"
     if dir_path[0] == "~":
         dir_path = os.path.expanduser(dir_path)
     target_set = pull_set(set_name)
+    # if given an unknown setname
     if not target_set:
+        #?  fatal?
         Error(f"Set \"{set_name}\" not found.", 102, fatal=True, verbose=False)
+    # if given a bad path
     if not os.path.exists(dir_path):
         Error(f"Path \"{dir_path}\" does not exist.", 101)
+
+    # if path is already in the set
+    current_paths = target_set["paths"]
+    if dir_path in current_paths:
+        #?  fatal?
+        Error(f"Path already included in the set '{set_name}'", 555, fatal=True)
     target_set["paths"].append(dir_path)
     save_set(target_set)
     print(f"[~] Path added to set \"{set_name}\" -> {dir_path}")
+
 
 # validates the abspath of the tar file being set
 def validate_path(test_path):
