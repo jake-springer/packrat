@@ -111,9 +111,11 @@ class Error:
             sys.exit()    
         if verbose:
             # error_string += "\n"
-            print(error_string) 
+            print(error_string)
+ 
 
 def quick_look():
+    '''program stats displayed on program start'''
     data = load_data()
     set_list = data["sets"]
     settings = data["settings"]
@@ -123,6 +125,15 @@ def quick_look():
 
     print("[>] drop directory    ->  ", drop_dir)
     print("[>] number of sets    ->  ", set_count)
+
+
+def validate_path(test_path):
+    '''checks if the path of the directory BEFORE the given child exists'''
+    path = os.path.split(test_path)
+    if not os.path.exists(path[0]):
+        return True
+    return False
+
 
 #---------------------------------------------------------
 
@@ -152,17 +163,6 @@ help_info = {
             "example":"set new {set name}",
             "desc":"create a new set"
         }
-    },
-    "config":{
-        "drop":{
-            "example":"config drop /mnt/backup_drive/packrat",
-            "desc":"set the default directory for tarfiles to be stored."
-        },
-        "default_target":{
-            "example":"config default_target",
-            "desc":"toggle automatic creation of tar path/file name"
-        }
-
     }
 }
 
@@ -179,14 +179,13 @@ def display_help_page(section):
     print()
     
 
-def help_handler(commands):
-    if commands:
-        category = commands[0]
+def help_handler(category=None):
+    print()
+    if category:
         try:
             section = help_info[category]
         except KeyError:
             Error(f"No help section for {category}", 106)
-            print()
             return 
         display_help_page(category)
     
@@ -194,21 +193,11 @@ def help_handler(commands):
         for command in help_info:
             display_help_page(command)
 
-#--------------------------------------------------------
+#=========================================================
 #   ===  SETS ===
 
-def add_record(set_dict, record):
-    date, time = get_now()
-    text = f"[{date} | {time}] {record}"
-    set_dict["records"].append(text)
-    return set_dict
 
-
-def find_set_index(set_list, set_name):
-    for s in set_list:
-        if s["name"].strip() == set_name.strip():
-            return set_list.index(s)
-    return -1
+# handle json data
 
 # finds the set dict in the json and returns it
 def pull_set(set_name):
@@ -234,64 +223,15 @@ def save_set(set_dict): # NEW
     # print(f"[!] Set \"{set_dict['name']}\" was updated\n")
 
 
-# adds path to a sets "path":[] value
-def add_directory(set_name, dir_path):
-    # resolve "~/"
-    if dir_path[0] == "~":
-        dir_path = os.path.expanduser(dir_path)
-    target_set = pull_set(set_name)
-    # if given an unknown setname
-    if not target_set:
-        #?  fatal?
-        Error(f"Set \"{set_name}\" not found.", 102, fatal=True, verbose=False)
-    # if given a bad path
-    if not os.path.exists(dir_path):
-        Error(f"Path \"{dir_path}\" does not exist.", 101)
-
-    # if path is already in the set
-    current_paths = target_set["paths"]
-    if dir_path in current_paths:
-        #?  fatal?
-        Error(f"Path already included in the set '{set_name}'", 555, fatal=True)
-    target_set["paths"].append(dir_path)
-    save_set(target_set)
-    print(f"[~] Path added to set \"{set_name}\" -> {dir_path}")
+def find_set_index(set_list, set_name):
+    for s in set_list:
+        if s["name"].strip() == set_name.strip():
+            return set_list.index(s)
+    return -1
 
 
-# validates the abspath of the tar file being set
-def validate_path(test_path):
-    path = os.path.split(test_path)
-    if not os.path.exists(path[0]):
-        return 0 
-    return 1
-
-
-def default_target(set_name):
-    data = load_data()
-    drop_dir = data["settings"]["drop_dir"]
-    # set drop dir to ~/ if not set  
-    if not drop_dir:
-        Error("cannot set default target -> no drop directory configured.", 109)
-        print("defaulting to the home directory")
-        drop_dir = os.path.expanduser("~/")
-
-    tarfile = f"{set_name.lower()}_%.tar.gz"
-    return os.path.join(drop_dir, tarfile)
-
-
-def set_tarfile_path(set_name, new_tar):
-    if new_tar[0] == '~':
-        new_tar = os.path.expanduser(new_tar)
-    target_set = pull_set(set_name)
-    if not validate_path(new_tar):
-        print(f"[!] Path error. Directory doesn't exist.\n")
-        return
-    old_tar = target_set["tar_file"]
-    target_set["tar_file"] = new_tar
-    record = f"changed tarfile: {old_tar} -> {new_tar}"
-    target_set = add_record(target_set, record)
-    save_set(target_set)
-    print(f"[~] Set tar path for \"{set_name}\" -> {new_tar}\n")
+# -------------------------------------------------------
+# create/delete sets
 
 
 def create_set(set_name):
@@ -351,6 +291,64 @@ def delete_set(set_name):
     print(f"[!] Set \"{set_name}\" removed.\n")
 
 
+def default_target(set_name):
+    '''set the default tarfile file path if enabled'''
+    data = load_data()
+    drop_dir = data["settings"]["drop_dir"]
+    # set drop dir to ~/ if not set  
+    if not drop_dir:
+        Error("cannot set default target -> no drop directory configured.", 555)
+        print("defaulting to the home directory")
+        drop_dir = os.path.expanduser("~/")
+
+    tarfile = f"{set_name.lower()}_%.tar.gz"
+    return os.path.join(drop_dir, tarfile)
+
+
+# -------------------------------------------------------
+# modify sets
+
+def add_record(set_dict, record):
+    '''add a set-specific log to the json entry'''
+    date, time = get_now()
+    text = f"[{date} | {time}] {record}"
+    set_dict["records"].append(text)
+    return set_dict
+
+
+def add_directory(set_name, dir_path):
+    '''adds path to a sets "path":[] value'''
+    if dir_path[0] == "~":
+        dir_path = os.path.expanduser(dir_path)
+    target_set = pull_set(set_name)
+    if not target_set:
+        Error(f"Set \"{set_name}\" not found.", 102, fatal=True, verbose=False)
+    if not os.path.exists(dir_path):
+        Error(f"Path \"{dir_path}\" does not exist.", 101)
+    target_set["paths"].append(dir_path)
+    save_set(target_set)
+    print(f"[~] Path added to set \"{set_name}\" -> {dir_path}")
+
+
+def set_tarfile_path(set_name, new_tar):
+    '''set a new tarfile path for a set'''
+    if new_tar[0] == '~':
+        new_tar = os.path.expanduser(new_tar)
+    target_set = pull_set(set_name)
+    if not validate_path(new_tar):
+        print(f"[!] Path error. Directory doesn't exist.\n")
+        return
+    old_tar = target_set["tar_file"]
+    target_set["tar_file"] = new_tar
+    record = f"changed tarfile: {old_tar} -> {new_tar}"
+    target_set = add_record(target_set, record)
+    save_set(target_set)
+    print(f"[~] Set tar path for \"{set_name}\" -> {new_tar}\n")
+
+
+# -------------------------------------------------------
+# UI functions for displaying set information
+
 def list_sets():
     data = load_data()
     sets = data["sets"]
@@ -401,6 +399,7 @@ def set_info(set_name):
 
 
 def manage_sets(command_list):
+    '''nav/command handler for sets'''
     try:
         command = command_list[0]
     except IndexError:
@@ -460,6 +459,7 @@ def manage_sets(command_list):
         return
     
 #--------------------------------------------------------
+# === ARCHIVING ===
 
 def archive_check(set_dict):
     has_tar = bool(set_dict["tar_file"])
@@ -568,7 +568,7 @@ def admin_mode():
             add_data_field()
 
 #--------------------------------------------------------
-# config functions
+# drop dir
 
 def set_drop_dir(drop_dir_path):
     '''set the settings:{drop_dir:""} value in the json file'''
@@ -580,22 +580,7 @@ def set_drop_dir(drop_dir_path):
     data = load_data()
     data["settings"]["drop_dir"] = drop_dir_path
     save_data(data)
-    print("-> set drop directory:", drop_dir_path, "\n")
-
-
-def toggle_default_target():
-    data = load_data()
-    use_default = data["settings"]["use_default_target"]
-    if use_default:
-        use_default = False 
-        print("-> default_target disabled")
-    else:
-        use_default = True 
-        print("-> default_target enabled")
-    
-    data["settings"]["use_default_target"] = use_default
-    save_data(data)
-    print()
+    print("[>] Set drop directory:", drop_dir_path, "\n")
 
 
 def config_handler(option_list):
@@ -611,8 +596,6 @@ def config_handler(option_list):
         except IndexError:
             print("provide a path to set as the drop directory\n")
             return
-    elif command == 'default_target':
-        toggle_default_target()
 
 #--------------------------------------------------------
 
@@ -629,7 +612,7 @@ def main():
         if cursor in quit_terms:
             sys.exit()        
         elif cursor == "help":
-            help_handler(commands)
+            help_handler()
         elif cursor == "set":
             manage_sets(commands)
         elif cursor == "config":
@@ -649,7 +632,6 @@ def main():
 def cli_handler(options):
     add_ops = ["-a", "--add"] # packrat -a {set} (1 option)
     list_ops = ["-l", "--list", "--sets"] # packrat -l (0 options)
-    drop_ops = ["-d", "--drop", "--dump"]
     command = options[0]
     if command in add_ops:
         try: 
@@ -663,10 +645,7 @@ def cli_handler(options):
         add_directory(set_name, os.getcwd())
     if command in list_ops:
         list_sets()
-    elif command in drop_ops:
-        set_drop_dir(os.getcwd())
-
-
+    
     sys.exit()
 
 if cli_args:
