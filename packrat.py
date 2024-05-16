@@ -1,657 +1,109 @@
-#!/usr/bin/python
+#!/usr/bin/python3
+#------------------------------------------------------------------------------
+''' 
+packrat v2
+Jacob Springer
+5/14/24
+Utility for managing tar archives on linux systems. This is the backend
+portion that is used by other applications that interact with the user.
+'''
+#------------------------------------------------------------------------------
 
-#----------------------------------------------------------
-
-import json
-import tarfile
-import os 
+import json 
+import os
+from datetime import datetime
+from rich.console import Console
 import sys
-from datetime import datetime 
-from subprocess import call
+from subprocess import call 
 
-#----------------------------------------------------------
+#------------------------------------------------------------------------------
+# Global variables
 
-app_title = "Pack Rat"
-app_version = "0.2.4"
-data_file = os.path.expanduser("~/.config/packrat.json")
-cli_args = sys.argv[1:]
-line_length = 50
-options = {
-    "verbose":False
+DEFAULT_CONFIG = {  #  Default dict used when creating a new packrat.json
+    "settings": {"backups_dir": os.path.expanduser("~/")},
+    "targets":[]
 }
+now = datetime.now()
+date = now.strftime("%y-%m-%d")
+tag = "[red]packrat >[/]"
+console = Console()
 
-quit_terms = ["exit", "q","quit", "end"]
+#------------------------------------------------------------------------------
 
-#----------------------------------------------------------
-
-default_data = {
-        "settings":{
-            "drop_dir":None,
-            "use_default_target":True
-            },   
-        "sets":[]
-        }
-
-
-def no_data():
-    '''~/.config/packrat.json not found'''
-    print(f"\n[!] Could not load data file --> {data_file} \n")
-    print("What do you want to do?")
-    print()
-    print("[1]. Create new file")
-    print("[2]. Exit")
-    while True:
-        select = input("\n[?] ")
-        if select == '2':
+class PackRat:
+    def __init__(self):
+        self.config_file = '/home/jakers/packrat.json'
+        self.targets = []   #  stored in config
+        self.settings = {}  #  stored in config
+        self.load_config()
+    
+    def create_new_config(self):
+        with open(self.config_file, 'w') as file:
+            file.write(json.dumps(DEFAULT_CONFIG, indent=4))
+        
+    def load_config(self):
+        try:
+            with open(self.config_file, 'r') as file:
+                data = json.load(file)
+        except FileNotFoundError: 
+            console.print(f"{tag} [red]Error:[/] Couldn't find config file: " + self.config_file)
+            console.print(f"{tag} I'll create an empty config file, but you'll have to add new target paths.")
+            self.create_new_config()
+            console.print(f"{tag} Aborting...")
             sys.exit()
-        elif select == '1':
-            with open(data_file, 'w') as file:
-                file.write(json.dumps(default_data, indent=4))
-            print("new file created ->", data_file)
-            break
+        except json.decoder.JSONDecodeError: 
+            console.print(f"{tag} [red]Error:[/] problem loading config file: {self.config_file}")
+            console.print(f"{tag} Check the file, or delete it and I'll genereate an empty one.")
+            sys.exit()
+        self.targets = data['targets']
+        self.settings = data['settings']
 
+    def save_config(self):
+        # Overwrite self.config_file with new values
+        data = {"settings":self.settings, "targets":self.targets}
+        with open(self.config_file, 'w') as file:
+            file.write(json.dumps(data, indent=4))
 
-def load_data():
-    validate_config()
-    with open(data_file, 'r') as file:
-        return json.load(file)
+    def remove_target(self, target_index: int) -> bool:
+        # Returns bool dependent on if it was successful
+        try:
+            del self.targets[target_index]
+            return True
+        except IndexError:
+            return False 
 
+    def add_target(self, target_path) -> bool:
+        # Returns bool dependent on if it was successful
+        if os.path.exists(target_path):
+            self.targets.append(target_path)
+            return True 
+        else:
+            return False 
 
-def save_data(data):
-    with open(data_file, 'w') as file:
-        file.write(json.dumps(data, indent=4))
-
-
-def validate_config():
-    try:
-        with open(data_file, 'r') as file:
-            pass 
-    except FileNotFoundError:
-       no_data() 
-
-#---------------------------------------------------------
-
-def get_now(): # returns date,time
-    now = datetime.now()
-    d = now.strftime("%m-%d-%y")
-    t = now.strftime("%H:%M")
-    return d, t
-
-
-def date_in_string(string):
-    date = get_now()[0]
-    return string.replace("%", date)
-
-
-def clear():
-    call("clear")
-
-
-def header(text):
-    print(''' 
-____            _      ____       _   
-|  _ \ __ _  ___| | __ |  _ \ __ _| |_ 
-| |_) / _` |/ __| |/ / | |_) / _` | __|
-|  __/ (_| | (__|   <  |  _ < (_| | |_ 
-|_|   \__,_|\___|_|\_\ |_| \_\__,_|\__|                                        
-    ''')
-    print("Version:", app_version)
+    def generate_tarfile_name(self, file_path) -> str:
+        # Convert filename to file_date.tar.gz
+        base = os.path.basename(file_path).lower()
+        tf = base + '_' + date + '.tar.gz'
+        return os.path.join(self.settings['backups_dir'], tf)
     
+    def pack_by_index(self, target_index: int) -> bool:
+        try:
+            source = self.targets[target_index]
+        except IndexError:
+            return False
+        if not os.path.exists(source):
+            return False 
+        destination = self.generate_tarfile_name(source)
+        call(["tar", "-czf", destination, source])
+        return True 
 
-class Error:
-    def __init__(self, desc, code, fatal=False, verbose=True):
-        self.desc = desc
-        self.code = str(code)
-
-        error_string = f"packrat {self.code.lower()}: {desc} "
-        if fatal:
-            error_string += " (CRITICAL)"
-            if verbose:
-                print(error_string)
-            sys.exit()    
-        if verbose:
-            # error_string += "\n"
-            print(error_string)
- 
-
-def quick_look():
-    '''program stats displayed on program start'''
-    data = load_data()
-    set_list = data["sets"]
-    settings = data["settings"]
-    
-    set_count = str(len(set_list))
-    drop_dir = settings["drop_dir"]
-
-    print("[>] drop directory    ->  ", drop_dir)
-    print("[>] number of sets    ->  ", set_count)
-
-
-def validate_path(test_path):
-    '''checks if the path of the directory BEFORE the given child exists'''
-    path = os.path.split(test_path)
-    if not os.path.exists(path[0]):
+    def pack_by_path(self, path, tarfile_name=None) -> bool:
+        if not os.path.exists(path):
+            return False 
+        if not tarfile_name: # Generate default archive name
+            tarfile_name = self.generate_tarfile_name(path)
+        else:
+            tarfile_name = os.path.join(self.settings['backups_dir'], tarfile_name)
+        call(["tar", "-czf", tarfile_name, path])
         return True
-    return False
-
-
-#---------------------------------------------------------
-
-help_info = {
-    "set":{
-        "add":{
-            "example":"set add {set name} {path to add}",
-            "desc":"add a new path for the set to archive."
-        },
-        "target":{
-            "example":"set target {set name} {path to archive.tar.gz}",
-            "desc":"specify the path and filename of the archive."
-        },
-        "info":{
-            "example":"set info {set name}",
-            "desc":"get detailed information about a set"
-        },
-        "list":{
-            "example":"set list",
-            "desc":"show a list of all sets."
-        },
-        "delete":{
-            "example":"set delete {set name}",
-            "desc":"delete a saved set."
-        },
-        "new":{
-            "example":"set new {set name}",
-            "desc":"create a new set"
-        }
-    }
-}
-
-
-def display_help_page(section):
-    commands = help_info[section]
-    print(f"\n  --->  \"{section}\" help page  <---")
-    for action in commands:
-        command_info = help_info[section][action]
-        print()
-        print("->", action)
-        print("--->", command_info["desc"])
-        print("---> example:", command_info["example"])
-    print()
     
-
-def help_handler(category=None):
-    print()
-    if category:
-        try:
-            section = help_info[category]
-        except KeyError:
-            Error(f"No help section for {category}", 106)
-            return 
-        display_help_page(category)
-    
-    else:
-        for command in help_info:
-            display_help_page(command)
-
-#=========================================================
-#   ===  SETS ===
-
-
-# handle json data
-
-# finds the set dict in the json and returns it
-def pull_set(set_name):
-    data = load_data()
-    sets = data["sets"]
-    set_index = find_set_index(sets, set_name.strip())
-    if set_index == -1: # "not set_index" means I can't access index 0
-        Error(f"Could not find set --> {set_name}", 102)
-        return
-    return sets[set_index]
-
-
-def save_set(set_dict): # NEW
-     # finds the set dict in the json, updates it, and saves it
-    data = load_data()
-    sets = data["sets"]
-    set_index = find_set_index(sets, set_dict["name"])
-    if set_index == -1:
-        Error(f"Set {set_dict['name']} was given to save, but it doesn't exist.", 103)
-        return
-    sets[set_index] = set_dict
-    save_data(data)
-    # print(f"[!] Set \"{set_dict['name']}\" was updated\n")
-
-
-def find_set_index(set_list, set_name):
-    for s in set_list:
-        if s["name"].strip() == set_name.strip():
-            return set_list.index(s)
-    return -1
-
-
-# -------------------------------------------------------
-# create/delete sets
-
-
-def create_set(set_name):
-    data = load_data()
-    set_list = data["sets"]
-
-    # check if set with matching name exists
-    for s in set_list:
-        if s["name"].lower() == set_name:
-            Error(f"Set with name \"{set_name}\" already exists.", 107)
-            return
-
-    # pull settings
-    config = data["settings"]
-    use_default_target = config["use_default_target"]
-    if use_default_target:
-        print("> \"use default target\" enabled")
-        target_dir = default_target(set_name)
-        if default_target:
-            print("-> set default target:", target_dir)
-        else:
-            print("[!] no drop directory specified, defaulted to home directory:", target_dir)
-    else:
-        print("> \"use default target\" disabled")
-        target_dir = None
-
-    # create set dictionary
-    new_set = {
-        "name":set_name,
-        "tar_file":target_dir,
-        "last_ran":None,
-        "paths":[],
-        "records":[]
-    }
-
-    # save the set to the db
-    new_set = add_record(new_set, "set created")
-    set_list.append(new_set)  
-    save_data(data)
-    print("[~] Created new set: " + set_name + "\n")
-
-
-def delete_set(set_name):
-    data = load_data()
-    sets = data["sets"]
-    set_index = find_set_index(sets, set_name.strip())
-    if set_index == -1: # "not set_index" means I can't access index 0
-        print(f"[!] Could not find set \"{set_name}\"\n")
-        return
-    print(f"[!] Delete the \"{set_name}\" set?")
-    conf = input("(y/N): ")
-    if conf.lower() != 'y':
-        print("[!] Cancelled, set preserved.\n")
-        return
-    sets.remove(sets[set_index])
-    save_data(data)
-    print(f"[!] Set \"{set_name}\" removed.\n")
-
-
-def default_target(set_name):
-    '''set the default tarfile file path if enabled'''
-    data = load_data()
-    drop_dir = data["settings"]["drop_dir"]
-    # set drop dir to ~/ if not set  
-    if not drop_dir:
-        Error("cannot set default target -> no drop directory configured.", 555)
-        print("defaulting to the home directory")
-        drop_dir = os.path.expanduser("~/")
-
-    tarfile = f"{set_name.lower()}_%.tar.gz"
-    return os.path.join(drop_dir, tarfile)
-
-
-# -------------------------------------------------------
-# modify sets
-
-def add_record(set_dict, record):
-    '''add a set-specific log to the json entry'''
-    date, time = get_now()
-    text = f"[{date} | {time}] {record}"
-    set_dict["records"].append(text)
-    return set_dict
-
-
-def add_directory(set_name, dir_path):
-    '''adds path to a sets "path":[] value'''
-    if dir_path[0] == "~":
-        dir_path = os.path.expanduser(dir_path)
-    target_set = pull_set(set_name)
-    if not target_set:
-        Error(f"Set \"{set_name}\" not found.", 102, fatal=True, verbose=False)
-    if not os.path.exists(dir_path):
-        Error(f"Path \"{dir_path}\" does not exist.", 101)
-    target_set["paths"].append(dir_path)
-    save_set(target_set)
-    print(f"[~] Path added to set \"{set_name}\" -> {dir_path}")
-
-
-def set_tarfile_path(set_name, new_tar):
-    '''set a new tarfile path for a set'''
-    if new_tar[0] == '~':
-        new_tar = os.path.expanduser(new_tar)
-    target_set = pull_set(set_name)
-    if not validate_path(new_tar):
-        print(f"[!] Path error. Directory doesn't exist.\n")
-        return
-    old_tar = target_set["tar_file"]
-    target_set["tar_file"] = new_tar
-    record = f"changed tarfile: {old_tar} -> {new_tar}"
-    target_set = add_record(target_set, record)
-    save_set(target_set)
-    print(f"[~] Set tar path for \"{set_name}\" -> {new_tar}\n")
-
-
-# -------------------------------------------------------
-# UI functions for displaying set information
-
-def list_sets():
-    data = load_data()
-    sets = data["sets"]
-    print()
-    print('-' * 40)
-    for s in sets:
-        print()
-        print("[>] Set name:", s["name"])
-        if not s["tar_file"]:
-            print("--> no save file set")
-        else:
-            print("--> Save file:", s["tar_file"])
-        if not s["paths"]:
-            print("--> No paths added to the set.")
-        else:
-            print("--> Added paths:", len(s["paths"]))
-    print()
-    print('-' * 40)
-    print()
-
-
-def set_info(set_name):
-    print()
-    t_set = pull_set(set_name)
-    name = t_set['name']
-    tar = t_set["tar_file"]
-    last_ran = t_set["last_ran"]
-    path_list = t_set["paths"]
-    records = t_set["records"] #wip
-    print("->", name)
-    if tar:
-        print("--->", tar)
-    else:
-        print("---> no tarfile specified")
-
-    if last_ran:
-        print("---> last:", last_ran)
-    else:
-        print("---> never ran")
-
-    if path_list:
-        for p in path_list:
-            print("------>", p)
-    else:
-        print("---> no paths added")
-
-    print()
-
-
-def manage_sets(command_list):
-    '''nav/command handler for sets'''
-    try:
-        command = command_list[0]
-    except IndexError:
-        print("[!] Specify an option to use with \"set\" (eg: set info my_set)\n")
-        return
-    # no options
-    if command == "list":
-        list_sets()
-        return
-    elif command == "help":
-        help_handler("set")
-        return
-
-    # single option
-    try:
-        option1 = command_list[1]
-    except IndexError:
-        Error(f"Not enough options provided for \"{command}\"", 105)
-        try:
-            print("Example:",help_info["set"][command]["example"], "\n")
-        except KeyError:
-            pass
-        return
-    
-    if command == "new":
-        create_set(option1)
-        return
-
-    elif command == "delete":
-        delete_set(option1)
-        return
-
-    elif command == "info":
-        set_info(option1)
-        return
-    
-    elif command == "run":
-        run(option1)
-        return
-    
-    # two options    
-    try:
-        option2 = command_list[2]
-    except IndexError:
-        Error(f"Not enough options provided for \"{command}\"", 105)
-        try:
-            print("Example:",help_info["set"][command]["example"], "\n")
-        except KeyError:
-            pass
-        return
-
-    if command == "target":
-        set_tarfile_path(option1, option2) 
-        return
-    elif command == "add":        
-        add_directory(option1, option2)
-        return
-    
-#--------------------------------------------------------
-# === ARCHIVING ===
-
-def archive_check(set_dict):
-    has_tar = bool(set_dict["tar_file"])
-    has_paths = bool(set_dict["paths"])
-    if not has_tar or not has_paths:
-        print(f"[!] Tar file -->  {str(has_tar).upper()}")
-        print(f"[!] Paths    -->  {str(has_paths).upper()}")
-        print(f"[!] Cannot begin archive of \"{set_dict['name']}\", missing requirements.")
-        print()
-        return False
-    return True
-
-
-def run(set_name):
-    target_set = pull_set(set_name)
-    if not archive_check(target_set):
-        return
-    print()
-    print("-" * line_length)
-    print()
-    print(" ---> archive information <---\n")
-    print("> Set name:", target_set["name"])
-    print("> Tar file:", target_set["tar_file"])
-    print("> Last archive:", target_set["last_ran"])
-    print("> Paths:")
-    for p in target_set["paths"]:
-        print("->", p)
-    print()
-    print("-" * line_length)
-    print()
-    while True:
-        conf = input("[?] Start archive (y/n): ")
-        if conf.lower() == 'n':
-            return
-        elif conf.lower() == 'y':
-            archive(target_set)
-            return 
-
-
-def archive(set_dict):
-    date = get_now()[0]
-    archive_name = set_dict["tar_file"]
-    if "%" in archive_name:
-        archive_name = date_in_string(archive_name)
-
-    paths = set_dict["paths"]
-    set_dict["last_ran"] = date
-
-    print(f"-> Starting the \"{set_dict['name']}\" archive.")
-    print("-> This may take a long time.\n")
-
-    with tarfile.open(archive_name, "w:gz") as tarhandle:
-        for path in paths:
-            for root,dirs,files in os.walk(path):
-                for f in files:
-                    full_path = os.path.join(root, f)
-                    print("--->", full_path)
-                    tarhandle.add(full_path)
-    
-    set_dict["last_ran"] = date
-    set_dict = add_record(set_dict, f"performed archive -> {archive_name}")
-    save_set(set_dict)
-    print("\n\n[!] Archive completed -> " + archive_name)
-    print()
-
-#--------------------------------------------------------
-# admin functions
-
-def reset_data():
-    default_data = {
-            "settings":{},
-            "sets":[]
-            }
-    with open(data_file, 'w') as file:
-        file.write(json.dumps(default_data, indent=4))
-    create_set("main")
-
-
-def add_data_field():
-    data = load_data()
-    sets = data["sets"]
-    try:
-        print()
-        k = input("[?] Data key: ")
-        v = input("[?] Default value: ")
-        print()
-    except KeyboardInterrupt:
-        return
-    for s in sets:
-        s[k] = v 
-    save_data(data)
-    print(f"\n[!] Updated all sets: {str(k)} = {str(v)}\n")
-
-
-def admin_mode():
-    print("\n\n\n--> You are in admin mode! <--")
-    print("\n[!] See the documentation for admin commands.")
-    while True:
-        command = input("\n[admin] ").strip()
-        if command in quit_terms:
-            break
-        elif command == "reset":
-            reset_data()
-            print("[>] JSON data has been reset.")
-        elif command == "add_field":
-            add_data_field()
-
-#--------------------------------------------------------
-# drop dir
-
-def set_drop_dir(drop_dir_path):
-    '''set the settings:{drop_dir:""} value in the json file'''
-    if drop_dir_path[0] == "~": #  expand path if ~/...
-        drop_dir_path = os.path.expanduser(drop_dir_path)
-    if not os.path.exists(drop_dir_path):
-        Error("Path doesn't exist", 108)
-        return
-    data = load_data()
-    data["settings"]["drop_dir"] = drop_dir_path
-    save_data(data)
-    print("[>] Set drop directory:", drop_dir_path, "\n")
-
-
-def config_handler(option_list):
-    '''gateway for config functions'''
-    try:
-        command = option_list[0]
-    except IndexError:
-        print("provide an option to use with 'config'.\n")
-        return
-    if command == 'drop':
-        try:
-            set_drop_dir(option_list[1])
-        except IndexError:
-            print("provide a path to set as the drop directory\n")
-            return
-
-#--------------------------------------------------------
-
-def main():
-    data = load_data()
-    header(app_title)
-    print("(type \"help\" for more information)\n")
-    quick_look()
-    print("\n\n")
-    while True:
-        select = input("[~] ").split()
-        cursor = select[0]
-        commands = select[1:]
-        if cursor in quit_terms:
-            sys.exit()        
-        elif cursor == "help":
-            help_handler()
-        elif cursor == "set":
-            manage_sets(commands)
-        elif cursor == "config":
-            config_handler(commands)
-        elif cursor == "clear":
-            clear()
-            header(app_title)
-        elif cursor == "admin":
-            admin_mode()
-            print("\n---> You have left admin mode <---\n\n")
-        else:
-            print(f"\n[>] Not a recognized option: \"{cursor}\". Enter \"help\" for more infomration.")
-
-#---------------------------------------------------------
-#   === CLI handling ===
-
-def cli_handler(options):
-    add_ops = ["-a", "--add"] # packrat -a {set} (1 option)
-    list_ops = ["-l", "--list", "--sets"] # packrat -l (0 options)
-    command = options[0]
-    if command in add_ops:
-        try: 
-            set_name = options[1]
-        except IndexError:
-            Error(
-                "Must provide a set name. Use \"packrat -l\" to view sets.", 
-                104, 
-                fatal=True # kills program
-            )
-        add_directory(set_name, os.getcwd())
-    if command in list_ops:
-        list_sets()
-    
-    sys.exit()
-
-if cli_args:
-    cli_handler(cli_args)
-
-clear()
-main()
-
-#---------------------------------------------------------
